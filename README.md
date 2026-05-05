@@ -45,8 +45,10 @@ MONGO_URI=your_mongodb_connection_string
 JWT_SECRET=your_jwt_secret
 EMAIL_USER=your_email_address
 EMAIL_PASS=your_email_app_password
-CLIENT_URL=http://localhost:3000
+CLIENT_URL=https://your-frontend-live-url.com
 ```
+
+Set `CLIENT_URL` to your deployed frontend URL. For multiple allowed frontend URLs, separate them with commas.
 
 Do not commit real secrets. If credentials were shared publicly, rotate them in MongoDB Atlas and Gmail.
 
@@ -70,10 +72,10 @@ Or start normally:
 npm start
 ```
 
-The API runs on:
+The API runs on the port from `PORT`.
 
 ```text
-http://localhost:5000
+GET /
 ```
 
 ## API Routes
