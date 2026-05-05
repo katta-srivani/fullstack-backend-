@@ -13,23 +13,11 @@ const app = express();
 // Security HTTP headers
 app.use(helmet());
 
-const allowedOrigins = (process.env.CLIENT_URL || "")
-  .split(",")
-  .map((origin) => origin.trim())
-  .filter(Boolean);
-
-const isLocalFrontend = (origin) =>
-  /^http:\/\/(localhost|127\.0\.0\.1):\d+$/.test(origin);
-
 // CORS
 app.use(
   cors({
     origin(origin, callback) {
-      if (!origin || isLocalFrontend(origin) || allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
-
-      return callback(new Error("Not allowed by CORS"));
+      callback(null, true);
     },
     credentials: true
   })

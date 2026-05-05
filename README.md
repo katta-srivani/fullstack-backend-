@@ -48,8 +48,7 @@ EMAIL_PASS=your_email_app_password
 CLIENT_URL=https://your-frontend-live-url.com
 ```
 
-Set `CLIENT_URL` to your deployed frontend URL. For multiple allowed frontend URLs, separate them with commas.
-Local development origins such as `http://localhost:3000` and `http://localhost:3001` are allowed automatically.
+`CLIENT_URL` is used when generating password reset links. CORS accepts frontend requests from local and deployed origins.
 
 Do not commit real secrets. If credentials were shared publicly, rotate them in MongoDB Atlas and Gmail.
 
