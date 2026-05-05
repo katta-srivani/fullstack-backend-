@@ -49,6 +49,7 @@ CLIENT_URL=https://your-frontend-live-url.com
 ```
 
 Set `CLIENT_URL` to your deployed frontend URL. For multiple allowed frontend URLs, separate them with commas.
+Local development origins such as `http://localhost:3000` and `http://localhost:3001` are allowed automatically.
 
 Do not commit real secrets. If credentials were shared publicly, rotate them in MongoDB Atlas and Gmail.
 

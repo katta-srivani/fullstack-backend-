@@ -18,11 +18,14 @@ const allowedOrigins = (process.env.CLIENT_URL || "")
   .map((origin) => origin.trim())
   .filter(Boolean);
 
+const isLocalFrontend = (origin) =>
+  /^http:\/\/(localhost|127\.0\.0\.1):\d+$/.test(origin);
+
 // CORS
 app.use(
   cors({
     origin(origin, callback) {
-      if (!origin || allowedOrigins.length === 0 || allowedOrigins.includes(origin)) {
+      if (!origin || isLocalFrontend(origin) || allowedOrigins.includes(origin)) {
         return callback(null, true);
       }
 
