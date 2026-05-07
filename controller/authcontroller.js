@@ -66,7 +66,7 @@ exports.login = async (req, res) => {
     const user = await User.findOne({ email: normalizedEmail });
     if (!user) {
       console.log(`Login failed: no user found for ${normalizedEmail}`);
-      return res.status(404).json({ message: "User not found" });
+      return res.status(401).json({ message: "Invalid credentials" });
     }
 
     let isMatch = await bcrypt.compare(submittedPassword, user.password);
@@ -113,8 +113,7 @@ exports.forgotPassword = async (req, res) => {
     user.resetToken = hashedToken;
     user.resetTokenExpiry = Date.now() + 15 * 60 * 1000;
     await user.save();
-    const resetLink = `${process.env.CLIENT_URL}/reset-password/${token}`;
-    console.log("Reset Link:", resetLink);
+    const resetLink = `${process.env.CLIENT_URL}/#/reset-password/${token}`;
     try {
       await sendEmail(
         user.email,
@@ -127,10 +126,11 @@ exports.forgotPassword = async (req, res) => {
         `
       );
     } catch (emailError) {
+      console.error("Password reset email failed:", emailError.message);
+
       user.resetToken = undefined;
       user.resetTokenExpiry = undefined;
       await user.save();
-      console.error("Password reset email failed:", emailError.message);
       return res.status(502).json({ message: "Unable to send reset email. Please try again later." });
     }
 
