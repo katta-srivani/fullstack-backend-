@@ -25,6 +25,8 @@ const handleControllerError = (res, error) => {
   return res.status(500).json({ message: "Server error" });
 };
 
+const hashResetToken = (token) => crypto.createHash("sha256").update(token).digest("hex");
+
 // REGISTER
 
 exports.register = async (req, res) => {
@@ -107,7 +109,7 @@ exports.forgotPassword = async (req, res) => {
     // ✅ Generate token
     const token = crypto.randomBytes(32).toString("hex");
     // ✅ Hash token (SECURITY)
-    const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+    const hashedToken = hashResetToken(token);
     user.resetToken = hashedToken;
     user.resetTokenExpiry = Date.now() + 15 * 60 * 1000;
     await user.save();
@@ -129,6 +131,28 @@ exports.forgotPassword = async (req, res) => {
   }
 };
 
+// VERIFY RESET TOKEN
+
+exports.verifyResetToken = async (req, res) => {
+  try {
+    const { token } = req.params;
+    const hashedToken = hashResetToken(token);
+
+    const user = await User.findOne({
+      resetToken: hashedToken,
+      resetTokenExpiry: { $gt: Date.now() }
+    });
+
+    if (!user) {
+      return res.status(400).json({ message: "Invalid or expired reset link" });
+    }
+
+    res.status(200).json({ message: "Reset link is valid" });
+  } catch (error) {
+    return handleControllerError(res, error);
+  }
+};
+
 // RESET PASSWORD
 
 exports.resetPassword = async (req, res) => {
@@ -141,7 +165,7 @@ exports.resetPassword = async (req, res) => {
     const { password } = req.body;
     const normalizedPassword = password.trim();
     // ✅ Hash token to match DB
-    const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+    const hashedToken = hashResetToken(token);
     const user = await User.findOne({
       resetToken: hashedToken,
       resetTokenExpiry: { $gt: Date.now() }

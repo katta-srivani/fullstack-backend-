@@ -6,6 +6,7 @@ const {
   register,
   login,
   forgotPassword,
+  verifyResetToken,
   resetPassword
 } = require("../controller/authcontroller");
 
@@ -38,6 +39,8 @@ router.post(
 );
 
 // Reset Password
+router.get("/reset-password/:token", verifyResetToken);
+
 router.post(
   "/reset-password/:token",
   [body("password").isLength({ min: 6 }).withMessage("Password must be at least 6 characters")],
