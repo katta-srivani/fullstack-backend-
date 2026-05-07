@@ -115,16 +115,25 @@ exports.forgotPassword = async (req, res) => {
     await user.save();
     const resetLink = `${process.env.CLIENT_URL}/reset-password/${token}`;
     console.log("Reset Link:", resetLink);
-    await sendEmail(
-      user.email,
-      "Password Reset",
-      `
-      <h3>Password Reset Request</h3>
-      <p>Click the link below to reset your password</p>
-      <a href="${resetLink}">${resetLink}</a>
-      <p>This link will expire in 15 minutes</p>
-      `
-    );
+    try {
+      await sendEmail(
+        user.email,
+        "Password Reset",
+        `
+        <h3>Password Reset Request</h3>
+        <p>Click the link below to reset your password</p>
+        <a href="${resetLink}">${resetLink}</a>
+        <p>This link will expire in 15 minutes</p>
+        `
+      );
+    } catch (emailError) {
+      user.resetToken = undefined;
+      user.resetTokenExpiry = undefined;
+      await user.save();
+      console.error("Password reset email failed:", emailError.message);
+      return res.status(502).json({ message: "Unable to send reset email. Please try again later." });
+    }
+
     res.status(200).json({ message: "Password reset link sent to email" });
   } catch (error) {
     return handleControllerError(res, error);

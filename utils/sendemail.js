@@ -1,30 +1,55 @@
-const nodemailer = require("nodemailer");
-
 const sendEmail = async (to, subject, html) => {
-  if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-    throw new Error("EMAIL_USER and EMAIL_PASS must be set in backend .env");
+  const apiKey = process.env.BREVO_API_KEY;
+  const senderEmail = process.env.BREVO_SENDER_EMAIL;
+  const senderName = process.env.BREVO_SENDER_NAME || "Password Reset App";
+
+  if (!apiKey || !senderEmail) {
+    throw new Error("BREVO_API_KEY and BREVO_SENDER_EMAIL must be set in backend .env");
   }
 
-  const transporter = nodemailer.createTransport({
-    service: "gmail",
-    connectionTimeout: 5000,
-    greetingTimeout: 5000,
-    socketTimeout: 5000,
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS
-    }
-  });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 10000);
 
-  const mailOptions = {
-    from: process.env.EMAIL_USER,
-    to,
+  const payload = {
+    sender: {
+      name: senderName,
+      email: senderEmail
+    },
+    to: [{ email: to }],
     subject,
-    html
+    htmlContent: html
   };
 
-  await transporter.sendMail(mailOptions);
-  console.log("Email sent successfully");
+  try {
+    const response = await fetch("https://api.brevo.com/v3/smtp/email", {
+      method: "POST",
+      headers: {
+        accept: "application/json",
+        "api-key": apiKey,
+        "content-type": "application/json"
+      },
+      body: JSON.stringify(payload),
+      signal: controller.signal
+    });
+
+    const result = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      const message = result.message || "Brevo email API request failed";
+      throw new Error(message);
+    }
+
+    console.log("Email sent successfully:", result.messageId);
+    return result;
+  } catch (error) {
+    if (error.name === "AbortError") {
+      throw new Error("Brevo email API timed out");
+    }
+
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
 };
 
 module.exports = sendEmail;
