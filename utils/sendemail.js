@@ -16,6 +16,7 @@ const sendEmail = async (to, subject, html) => {
     host: smtpHost,
     port: smtpPort,
     secure: smtpPort === 465,
+    family: 4,
     connectionTimeout: 10000,
     greetingTimeout: 10000,
     socketTimeout: 15000,
