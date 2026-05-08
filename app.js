@@ -38,16 +38,15 @@ app.get("/", (req, res) => {
   res.send("API is running");
 });
 
-app.get("/api/health", (req, res) => {
+const healthHandler = (req, res) => {
   res.status(200).json({
     status: "ok",
     database: mongoose.connection.readyState === 1 ? "connected" : "disconnected"
   });
-});
+};
 
-app.get("/health", (req, res) => {
-  res.redirect(307, "/api/health");
-});
+app.get("/api/health", healthHandler);
+app.get("/health", healthHandler);
 
 app.use("/api", (req, res, next) => {
   if (mongoose.connection.readyState !== 1) {
