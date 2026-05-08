@@ -26,6 +26,25 @@ const handleControllerError = (res, error) => {
 };
 
 const hashResetToken = (token) => crypto.createHash("sha256").update(token).digest("hex");
+const getClientUrl = () => (process.env.CLIENT_URL || "http://localhost:5173").replace(/\/+$/, "");
+const getResetLink = (token) => {
+  const clientUrl = getClientUrl();
+  const resetPath = `/reset-password/${token}`;
+
+  if (clientUrl.includes("#")) {
+    return `${clientUrl}${resetPath}`;
+  }
+
+  return `${clientUrl}/#${resetPath}`;
+};
+const isEmailConfigurationError = (error) =>
+  error.message === "SMTP_HOST, SMTP_USER, and SMTP_PASS must be set";
+const canUseLocalResetFallback = () => process.env.NODE_ENV !== "production";
+const getPublicUser = (user) => ({
+  id: user._id,
+  name: user.name,
+  email: user.email
+});
 
 // REGISTER
 
@@ -36,6 +55,7 @@ exports.register = async (req, res) => {
   }
   try {
     const { name, email, password } = req.body;
+    const normalizedName = name.trim();
     const normalizedEmail = email.trim().toLowerCase();
     const normalizedPassword = password.trim();
     const existingUser = await User.findOne({ email: normalizedEmail });
@@ -44,7 +64,7 @@ exports.register = async (req, res) => {
       return res.status(409).json({ message: "User already exists. Please login or use forgot password." });
     }
     const hashedPassword = await bcrypt.hash(normalizedPassword, 10);
-    const newUser = new User({ name, email: normalizedEmail, password: hashedPassword });
+    const newUser = new User({ name: normalizedName, email: normalizedEmail, password: hashedPassword });
     await newUser.save();
     res.status(201).json({ message: "User registered successfully" });
   } catch (error) {
@@ -86,7 +106,11 @@ exports.login = async (req, res) => {
       process.env.JWT_SECRET,
       { expiresIn: "1d" }
     );
-    res.status(200).json({ message: "Login successful", token });
+    res.status(200).json({
+      message: "Login successful",
+      token,
+      user: getPublicUser(user)
+    });
   } catch (error) {
     return handleControllerError(res, error);
   }
@@ -106,14 +130,12 @@ exports.forgotPassword = async (req, res) => {
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
-    // ✅ Generate token
     const token = crypto.randomBytes(32).toString("hex");
-    // ✅ Hash token (SECURITY)
     const hashedToken = hashResetToken(token);
     user.resetToken = hashedToken;
     user.resetTokenExpiry = Date.now() + 15 * 60 * 1000;
     await user.save();
-    const resetLink = `${process.env.CLIENT_URL}/#/reset-password/${token}`;
+    const resetLink = getResetLink(token);
     try {
       await sendEmail(
         user.email,
@@ -127,6 +149,20 @@ exports.forgotPassword = async (req, res) => {
       );
     } catch (emailError) {
       console.error("Password reset email failed:", emailError.message);
+      console.error("Password reset email details:", {
+        code: emailError.code,
+        command: emailError.command,
+        responseCode: emailError.responseCode,
+        response: emailError.response
+      });
+
+      if (isEmailConfigurationError(emailError) && canUseLocalResetFallback()) {
+        console.log(`Development password reset link for ${user.email}: ${resetLink}`);
+        return res.status(200).json({
+          message: "Email is not configured. Use the development reset link from the backend console.",
+          resetLink
+        });
+      }
 
       user.resetToken = undefined;
       user.resetTokenExpiry = undefined;
@@ -173,7 +209,6 @@ exports.resetPassword = async (req, res) => {
     const { token } = req.params;
     const { password } = req.body;
     const normalizedPassword = password.trim();
-    // ✅ Hash token to match DB
     const hashedToken = hashResetToken(token);
     const user = await User.findOne({
       resetToken: hashedToken,
