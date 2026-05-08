@@ -45,6 +45,10 @@ app.get("/api/health", (req, res) => {
   });
 });
 
+app.get("/health", (req, res) => {
+  res.redirect(307, "/api/health");
+});
+
 app.use("/api", (req, res, next) => {
   if (mongoose.connection.readyState !== 1) {
     return res.status(503).json({
@@ -56,7 +60,9 @@ app.use("/api", (req, res, next) => {
 });
 
 // Routes
-app.use("/api/auth", require("./routes/authroutes"));
+const authRoutes = require("./routes/authroutes");
+app.use("/api/auth", authRoutes);
+app.use("/auth", authRoutes);
 
 const PORT = process.env.PORT || 5000;
 
