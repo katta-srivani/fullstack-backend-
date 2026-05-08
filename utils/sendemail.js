@@ -1,26 +1,24 @@
 const nodemailer = require("nodemailer");
 
-const getSmtpPort = () => Number(process.env.SMTP_PORT || 587);
-
 const sendEmail = async (to, subject, html) => {
-  const host = process.env.SMTP_HOST;
-  const port = getSmtpPort();
-  const user = process.env.SMTP_USER;
-  const pass = process.env.SMTP_PASS;
-  const senderEmail = process.env.MAIL_FROM_EMAIL || user;
+  const smtpHost = process.env.SMTP_HOST;
+  const smtpPort = Number(process.env.SMTP_PORT || 587);
+  const smtpUser = process.env.SMTP_USER;
+  const smtpPass = process.env.SMTP_PASS;
+  const senderEmail = process.env.MAIL_FROM_EMAIL || smtpUser;
   const senderName = process.env.MAIL_FROM_NAME || "Password Reset App";
 
-  if (!host || !user || !pass || !senderEmail) {
-    throw new Error("SMTP_HOST, SMTP_USER, SMTP_PASS, and MAIL_FROM_EMAIL must be set in backend .env");
+  if (!smtpHost || !smtpUser || !smtpPass) {
+    throw new Error("SMTP_HOST, SMTP_USER, and SMTP_PASS must be set");
   }
 
   const transporter = nodemailer.createTransport({
-    host,
-    port,
-    secure: port === 465,
+    host: smtpHost,
+    port: smtpPort,
+    secure: smtpPort === 465,
     auth: {
-      user,
-      pass
+      user: smtpUser,
+      pass: smtpPass
     }
   });
 
@@ -31,7 +29,7 @@ const sendEmail = async (to, subject, html) => {
     html
   });
 
-  console.log("Email sent successfully:", info.messageId);
+  console.log("Email sent successfully via Nodemailer:", info.messageId);
   return info;
 };
 
