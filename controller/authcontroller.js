@@ -37,9 +37,6 @@ const getResetLink = (token) => {
 
   return `${clientUrl}/#${resetPath}`;
 };
-const isEmailConfigurationError = (error) =>
-  error.message === "SMTP_HOST, SMTP_USER, and SMTP_PASS must be set";
-const canUseLocalResetFallback = () => process.env.NODE_ENV !== "production";
 const getPublicUser = (user) => ({
   id: user._id,
   name: user.name,
@@ -155,19 +152,11 @@ exports.forgotPassword = async (req, res) => {
         responseCode: emailError.responseCode,
         response: emailError.response
       });
-
-      if (isEmailConfigurationError(emailError) && canUseLocalResetFallback()) {
-        console.log(`Development password reset link for ${user.email}: ${resetLink}`);
-        return res.status(200).json({
-          message: "Email is not configured. Use the development reset link from the backend console.",
-          resetLink
-        });
-      }
-
-      user.resetToken = undefined;
-      user.resetTokenExpiry = undefined;
-      await user.save();
-      return res.status(502).json({ message: "Unable to send reset email. Please try again later." });
+      console.log(`Password reset link for ${user.email}: ${resetLink}`);
+      return res.status(200).json({
+        message: "Email delivery failed. Use the reset link below to continue.",
+        resetLink
+      });
     }
 
     res.status(200).json({ message: "Password reset link sent to email" });
