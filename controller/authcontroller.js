@@ -152,11 +152,11 @@ exports.forgotPassword = async (req, res) => {
         responseCode: emailError.responseCode,
         response: emailError.response
       });
-      console.log(`Password reset link for ${user.email}: ${resetLink}`);
-      return res.status(200).json({
-        message: "Email delivery failed. Use the reset link below to continue.",
-        resetLink
-      });
+
+      user.resetToken = undefined;
+      user.resetTokenExpiry = undefined;
+      await user.save();
+      return res.status(502).json({ message: "Unable to send reset email. Please try again later." });
     }
 
     res.status(200).json({ message: "Password reset link sent to email" });
